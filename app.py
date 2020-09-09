@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, url_for, redirect
+from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from keras.models import model_from_json
 from keras.preprocessing import image
@@ -7,9 +8,11 @@ import numpy as np
 import os
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = "523541653"
+app.config['UPLOAD_FOLDER'] = 'static/images/'
+CORS(app)
 
 ALLOWED_EXTENSIONS = {'jpg', 'png', 'jpeg'}
-app.config['UPLOAD_FOLDER'] = 'static/images/'
 
 # home page of the server
 @app.route('/')
@@ -95,4 +98,4 @@ def get_image_array(filename, image_size=64):
     return im
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False, host='0.0.0.0', port='5000')
