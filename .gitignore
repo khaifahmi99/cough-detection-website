@@ -1,4 +1,4 @@
 bin/
 lib/
-# static/images/*
+static/images/*
 __pycache__/*
