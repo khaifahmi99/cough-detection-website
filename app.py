@@ -44,11 +44,12 @@ def process():
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename)) # save image to server
 
             score, confidence = get_score(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            confidence = round(confidence * 100, 2)
             if score == 1:
                 label = 'Coughing'
+                confidence = round(confidence * 100, 2)
             else:
                 label = 'Not Coughing'
+                confidence = 1 - round(confidence * 100, 2)
 
             return render_template('upload.html', filename=filename, pred={'label': label, 'confidence': confidence})
         else:
