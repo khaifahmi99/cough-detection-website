@@ -4,8 +4,11 @@ from werkzeug.utils import secure_filename
 from keras.models import model_from_json
 from keras.preprocessing import image
 import numpy as np
+import boto3
+import botocore
 
 import os
+import io
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "523541653"
@@ -60,23 +63,35 @@ def process():
 @app.route('/inference')
 def inference():
     url = request.args.get('url')
-    print(url)
+    BUCKET = 'cough-images'
+    KEY = url.replace('https://cough-images.s3-ap-southeast-2.amazonaws.com/', '')
 
-    # TODO: get image from s3 (url) and keep it in /static/images/
-    # img = ""
+    # get image from s3 (url) and keep it in /static/images/
+    bucket = boto3.resource('s3', region_name='ap-southeast-2').Bucket(BUCKET) # refer to bucket
+    try:
+        bucket.download_file(KEY, './static/images/test.jpg')
+        
+        # do prediction based on stored image
+        score, confidence = get_score(os.path.join(app.config['UPLOAD_FOLDER'], 'test.jpg'))
+        if score == 1:
+            label = 'Coughing'
+            confidence = round(confidence * 100, 2)
+            status = 'OK'
+        else:
+            label = 'Not Coughing'
+            confidence = 1 - round(confidence * 100, 2)
+            status = 'OK'
 
-    # filename = test.png
-    # img.save(os.path.join(app.config['UPLOAD_FOLDER'], filename)) # save image to server
+        response = {
+            'label': label,
+            'confidence': confidence,
+            'status': status
+        }
+    except botocore.exceptions.ClientError as e:
+        print(e)
+        return {'status': 'Error'}
 
-    # TODO: do prediction based on stored image
-    score, confidence = get_score(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-    if score == 1:
-        label = 'Coughing'
-        confidence = round(confidence * 100, 2)
-    else:
-        label = 'Not Coughing'
-        confidence = 1 - round(confidence * 100, 2)
-    return 'OK'
+    return response
 
 # used for displaying image
 @app.route('/display/<filename>')
