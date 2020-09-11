@@ -63,6 +63,9 @@ def process():
 @app.route('/inference')
 def inference():
     url = request.args.get('url')
+    if url is None:
+        return {'status': 'Error', 'msg': 'request must include url parameter'}
+
     BUCKET = 'cough-images'
     KEY = url.replace('https://cough-images.s3-ap-southeast-2.amazonaws.com/', '')
 
@@ -88,8 +91,7 @@ def inference():
             'status': status
         }
     except botocore.exceptions.ClientError as e:
-        print(e)
-        return {'status': 'Error'}
+        return {'status': 'Error', 'msg': e}
 
     return response
 
