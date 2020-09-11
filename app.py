@@ -57,6 +57,27 @@ def process():
 
         return render_template('upload.html', error="There is an error processing your uploaded file. Try again or try with another image")
 
+@app.route('/inference')
+def inference():
+    url = request.args.get('url')
+    print(url)
+
+    # TODO: get image from s3 (url) and keep it in /static/images/
+    # img = ""
+
+    # filename = test.png
+    # img.save(os.path.join(app.config['UPLOAD_FOLDER'], filename)) # save image to server
+
+    # TODO: do prediction based on stored image
+    score, confidence = get_score(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    if score == 1:
+        label = 'Coughing'
+        confidence = round(confidence * 100, 2)
+    else:
+        label = 'Not Coughing'
+        confidence = 1 - round(confidence * 100, 2)
+    return 'OK'
+
 # used for displaying image
 @app.route('/display/<filename>')
 def display_image(filename):
