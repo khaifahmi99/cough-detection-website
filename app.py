@@ -82,7 +82,7 @@ def inference():
             status = 'OK'
         else:
             label = 'Not Coughing'
-            confidence = 1 - round(confidence * 100, 2)
+            confidence = 100 - round(confidence * 100, 2)
             status = 'OK'
 
         response = {
