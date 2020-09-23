@@ -14,7 +14,7 @@ import io
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "523541653"
-app.config['UPLOAD_FOLDER'] = 'static/images/'
+app.config['UPLOAD_FOLDER'] = 'static/assets/'
 CORS(app)
 
 ALLOWED_EXTENSIONS = {'jpg', 'png', 'jpeg'}
@@ -102,37 +102,71 @@ def process():
         return render_template('upload.html', error="There is an error processing your uploaded file. Try again or try with another image")
 
 @app.route('/inference')
-def inference_img():
+def inference():
     url = request.args.get('url')
-    if url is None:
-        return {'status': 'Error', 'msg': 'request must include url parameter'}
+    media = request.args.get('type')
 
-    try:
-        # download the image from the given url
-        response = requests.get(url)
+    if url is None or media is None:
+        return {'status': 'Error', 'msg': 'request must include url and type parameters'}
 
-        file = open(os.path.join(app.config['UPLOAD_FOLDER'], 'test.jpg'), "wb")
-        file.write(response.content)
-        file.close()
-        
-        # do prediction based on stored image
-        score, confidence = get_score(os.path.join(app.config['UPLOAD_FOLDER'], 'test.jpg'))
-        if score == 1:
-            label = 'Coughing'
-            confidence = round(confidence * 100, 2)
-            status = 'OK'
-        else:
-            label = 'Not Coughing'
-            confidence = 100 - round(confidence * 100, 2)
-            status = 'OK'
+    if media == 'image':
+        try:
+            # download the image from the given url
+            response = requests.get(url)
 
-        response = {
-            'label': label,
-            'confidence': confidence,
-            'status': status
-        }
-    except Exception as e:
-        return {'status': 'Error', 'msg': e}
+            file = open(os.path.join(app.config['UPLOAD_FOLDER'], 'test.jpg'), "wb")
+            file.write(response.content)
+            file.close()
+            
+            # do prediction based on stored image
+            score, confidence = get_score(os.path.join(app.config['UPLOAD_FOLDER'], 'test.jpg'))
+            if score == 1:
+                label = 'Coughing'
+                confidence = round(confidence * 100, 2)
+                status = 'OK'
+            else:
+                label = 'Not Coughing'
+                confidence = 100 - round(confidence * 100, 2)
+                status = 'OK'
+
+            response = {
+                'label': label,
+                'confidence': confidence,
+                'status': status
+            }
+        except Exception as e:
+            return {'status': 'Error', 'msg': e}
+
+    elif media == 'sound':
+        try:
+            # download the image from the given url
+            response = requests.get(url)
+
+            file = open(os.path.join(app.config['UPLOAD_FOLDER'], 'test.wav'), "wb")
+            file.write(response.content)
+            file.close()
+            
+            # do prediction based on stored image
+            score, confidence = get_sound_score(os.path.join(app.config['UPLOAD_FOLDER'], 'test.wav'))
+            if score == 1:
+                label = 'Coughing'
+                confidence = round(confidence * 100, 2)
+                status = 'OK'
+            else:
+                label = 'Not Coughing'
+                confidence = 100 - round(confidence * 100, 2)
+                status = 'OK'
+
+            response = {
+                'label': label,
+                'confidence': confidence,
+                'status': status
+            }
+        except Exception as e:
+            return {'status': 'Error', 'msg': e}
+
+    else:
+        return {'status': 'Error', 'msg': 'type value must be either sound or image'}
 
     return response
 
