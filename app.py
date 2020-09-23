@@ -7,6 +7,7 @@ import numpy as np
 import boto3
 import botocore
 import librosa
+import requests
 
 import os
 import io
@@ -101,18 +102,18 @@ def process():
         return render_template('upload.html', error="There is an error processing your uploaded file. Try again or try with another image")
 
 @app.route('/inference')
-def inference():
+def inference_img():
     url = request.args.get('url')
     if url is None:
         return {'status': 'Error', 'msg': 'request must include url parameter'}
 
-    BUCKET = 'cough-images'
-    KEY = url.replace('https://cough-images.s3-ap-southeast-2.amazonaws.com/', '')
-
-    # get image from s3 (url) and keep it in /static/images/
-    bucket = boto3.resource('s3', region_name='ap-southeast-2').Bucket(BUCKET) # refer to bucket
     try:
-        bucket.download_file(KEY, './static/images/test.jpg')
+        # download the image from the given url
+        response = requests.get(url)
+
+        file = open(os.path.join(app.config['UPLOAD_FOLDER'], 'test.jpg'), "wb")
+        file.write(response.content)
+        file.close()
         
         # do prediction based on stored image
         score, confidence = get_score(os.path.join(app.config['UPLOAD_FOLDER'], 'test.jpg'))
@@ -130,7 +131,7 @@ def inference():
             'confidence': confidence,
             'status': status
         }
-    except botocore.exceptions.ClientError as e:
+    except Exception as e:
         return {'status': 'Error', 'msg': e}
 
     return response
