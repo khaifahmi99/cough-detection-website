@@ -6,6 +6,7 @@ from keras.preprocessing import image
 import numpy as np
 import boto3
 import botocore
+import librosa
 
 import os
 import io
@@ -16,6 +17,7 @@ app.config['UPLOAD_FOLDER'] = 'static/images/'
 CORS(app)
 
 ALLOWED_EXTENSIONS = {'jpg', 'png', 'jpeg'}
+ALLOWED_EXTENSIONS_SOUND = {'wav', 'mp3'}
 
 # home page of the server
 @app.route('/')
@@ -26,6 +28,44 @@ def hello():
 @app.route('/upload')
 def upload_image():
     return render_template('upload.html', error=None)
+
+# form to upload sound
+@app.route('/uploadSound')
+def upload_sound():
+    return render_template('upload_sound.html', error=None)
+
+# process the uploaded sound
+# POST only
+@app.route('/processSound', methods=['POST'])
+def process_sound():
+    if request.method == 'POST':
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            return render_template('upload_sound.html', error="No file uploaded")
+        
+        file = request.files['file']
+
+        if file.filename == '':
+            return render_template('upload_sound.html', error="No selected file")
+
+        # check if the uploaded file in in accepted format
+        if file and allowed_sound_file(file.filename):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename)) # save image to server
+
+            score, confidence = get_sound_score(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            if score == 1:
+                label = 'Coughing'
+                confidence = round(confidence * 100, 2)
+            else:
+                label = 'Not Coughing'
+                confidence = 100 - round(confidence * 100, 2)
+
+            return render_template('upload_sound.html', filename=filename, pred={'label': label, 'confidence': confidence})
+        else:
+            return render_template('upload_sound.html', error="Allowed image types are -> mp3, wav")
+
+        return render_template('upload_sound.html', error="There is an error processing your uploaded file. Try again or try with another sound file")
 
 # process the uploaded image
 # POST only
@@ -52,7 +92,7 @@ def process():
                 confidence = round(confidence * 100, 2)
             else:
                 label = 'Not Coughing'
-                confidence = 1 - round(confidence * 100, 2)
+                confidence = 100 - round(confidence * 100, 2)
 
             return render_template('upload.html', filename=filename, pred={'label': label, 'confidence': confidence})
         else:
@@ -105,8 +145,14 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# used to check the allowed file type
+def allowed_sound_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS_SOUND
+
+# get the model and calculate the score
 def get_score(file_path):
-    model = load_model()
+    model = load_cnn_model()
     im = get_image_array(file_path)
     score = model.predict_classes(im)
     percentage = model.predict(im)
@@ -114,7 +160,7 @@ def get_score(file_path):
     return score[0][0], percentage[0][0]
 
 # load the ML model from the saved file
-def load_model():
+def load_cnn_model():
     # load json and create model
     file = open('models/customCNN.dms', 'r')
     model_json = file.read()
@@ -135,6 +181,36 @@ def get_image_array(filename, image_size=64):
     im = im.reshape((1, 64, 64, 3))
     print('Image Shape: ', im.shape)
     return im
+
+# get the model and calculate the score
+def get_sound_score(file_path):
+    model = load_sound_model()
+    sound = convert_sound(file_path)
+    score = model.predict_classes(sound)
+    percentage = model.predict(sound)
+    print(score, percentage)
+    return score[0][0], percentage[0][0]
+
+# load the ML model from the saved file
+def load_sound_model():
+    # load json and create model
+    file = open('models/sound.dms', 'r')
+    model_json = file.read()
+    file.close()
+    model = model_from_json(model_json)
+
+    # load weights
+    model.load_weights('models/sound-weights.hdf5')
+    return model
+
+# convert the image to acceptable format
+def convert_sound(filename):
+    y, sr = librosa.load(filename)
+    mfccs = librosa.feature.mfcc(y, sr, n_mfcc=40)
+    mfccs = np.mean(mfccs.T,axis=0)
+    mfccs = mfccs.reshape((1, 10, 4, 1))
+    print('Sound Shape: ', mfccs.shape)
+    return mfccs
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port='5000')
