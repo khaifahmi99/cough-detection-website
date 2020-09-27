@@ -120,6 +120,7 @@ def inference():
             
             # do prediction based on stored image
             score, confidence = get_score(os.path.join(app.config['UPLOAD_FOLDER'], 'test.jpg'))
+            os.remove(os.path.join(app.config['UPLOAD_FOLDER'], 'test.jpg'))
             if score == 1:
                 label = 'Coughing'
                 confidence = round(confidence * 100, 2)
@@ -148,6 +149,7 @@ def inference():
             
             # do prediction based on stored image
             score, confidence = get_sound_score(os.path.join(app.config['UPLOAD_FOLDER'], 'test.wav'))
+            os.remove(os.path.join(app.config['UPLOAD_FOLDER'], 'test.wav'))
             if score == 1:
                 label = 'Coughing'
                 confidence = round(confidence * 100, 2)
@@ -168,7 +170,14 @@ def inference():
     else:
         return {'status': 'Error', 'msg': 'type value must be either sound or image'}
 
+    
     return response
+
+@app.route('/test')
+def t():
+    file_name = 't.jpg'
+    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], file_name))
+    return 
 
 # used for displaying image
 @app.route('/display/<filename>')
