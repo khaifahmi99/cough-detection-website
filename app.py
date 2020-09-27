@@ -173,12 +173,6 @@ def inference():
     
     return response
 
-@app.route('/test')
-def t():
-    file_name = 't.jpg'
-    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], file_name))
-    return 
-
 # used for displaying image
 @app.route('/display/<filename>')
 def display_image(filename):
