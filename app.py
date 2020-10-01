@@ -190,7 +190,8 @@ def inference():
                 'status': status
             }
         except Exception as e:
-            return {'status': 'Error', 'msg': e}
+            print(e)
+            return {'status': 'Error', 'msg': 'Error in predicting image'}
 
     elif media == 'sound':
         try:
@@ -219,7 +220,8 @@ def inference():
                 'status': status
             }
         except Exception as e:
-            return {'status': 'Error', 'msg': e}
+            print(e)
+            return {'status': 'Error', 'msg': 'Error in predicting sound'}
 
     else:
         return {'status': 'Error', 'msg': 'type value must be either sound or image'}
