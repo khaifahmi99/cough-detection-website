@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+
+    <title>Visualisations</title>
+
+</head>
+
+<body>
+
+    <nav>
+        <div class="nav-wrapper">
+            <a href="#" class="brand-logo center">Cough Detection Visualisation</a>
+        </div>
+    </nav>
+
+    <!-- content goes here -->
+    <div class="container">
+        <br>
+        <button id='1' class="btn" onclick="drawChart(this.id)">Node 1</button>
+        <button id='2' class="btn" onclick="drawChart(this.id)">Node 2</button>
+        <br><br><br>
+        <!-- chart goes here -->
+        <div>
+            <canvas id="chart" width="400" height="200"></canvas>
+        </div>
+    </div>
+
+    <script>
+        function drawChart(id) {
+
+            console.log(id);
+            var url = 'http://localhost:5000/data/' + id
+            fetch(url)
+                .then((response) => response.json())
+                .then((data) => {
+                    var currentDt = new Date();
+                    var options = {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    };
+                    var times = [];
+                    var temp = new Date(currentDt.getTime());
+                    var h = ("0" + temp.getHours()).slice(-2);
+                    temp = temp.toLocaleDateString('en-GB', options) + ' ' + h + ':00';
+                    times.push(temp);
+
+                    for (var i = 1; i < 12; i++) {
+                        var d = new Date(currentDt.getTime() - (1000 * 60 * 60 * i));
+                        var t = ("0" + d.getHours()).slice(-2);
+                        d = d.toLocaleDateString('en-GB', options) + ' ' + t + ':00';
+                        console.log(d);
+                        times.push(d);
+                    }
+                    times.reverse();
+                    console.log(times);
+
+                    console.log('fetch complete');
+                    var y = data['chart_y'];
+                    var x = data['chart_x'];
+
+                    final_data = {};
+                    times.forEach(time => {
+                        final_data[time] = 0;
+                    });
+
+                    for (var i = 0; i < x.length; i++) {
+                        final_data[x[i].substr(5, 17)] = parseInt(y[i]);
+                    }
+                    console.log(final_data);
+
+                    data = [];
+                    labels = [];
+                    for (var k in final_data) {
+                        labels.push(k);
+                        data.push(final_data[k]);
+                    }
+
+                    console.log(labels);
+                    console.log(data);
+                    var ctx = document.getElementById('chart').getContext('2d');
+                    var chart = new Chart(ctx, {
+                        // The type of chart we want to create
+                        type: 'bar',
+
+                        // The data for our dataset
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: data
+                            }]
+                        },
+
+                        // Configuration options go here
+                        options: {
+                            legend: {
+                                display: false
+                            },
+                            scales: {
+                                xAxes: [{
+                                    display: true,
+                                    ticks: {
+                                        min: 0
+                                    }
+                                }],
+                                yAxes: [{
+                                    display: true,
+                                    ticks: {
+                                        beginAtZero: true
+                                    }
+                                }],
+                            }
+                        }
+                    });
+
+                }).catch((e) => console.log(e));
+        }
+    </script>
+
+</body>
+
+</html>

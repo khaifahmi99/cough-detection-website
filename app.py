@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, url_for, redirect
+from flask import Flask, render_template, request, url_for, redirect, jsonify
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from keras.models import model_from_json
@@ -6,8 +6,14 @@ from keras.preprocessing import image
 import numpy as np
 import boto3
 import botocore
+from boto3.dynamodb.conditions import Key
 import librosa
 import requests
+import pandas as pd
+import datetime as dt
+import json
+from decimal import Decimal
+import decimal
 
 import os
 import io
@@ -20,10 +26,54 @@ CORS(app)
 ALLOWED_EXTENSIONS = {'jpg', 'png', 'jpeg'}
 ALLOWED_EXTENSIONS_SOUND = {'wav', 'mp3'}
 
+@app.route('/charts')
+def chart():
+    return render_template('charts.html')
+
 # home page of the server
-@app.route('/')
-def hello():
-    return "Welcome to the Cough Detection Server"
+@app.route('/data/<id>')
+def home(id):
+    print(id)
+    data=None
+    table = boto3.resource('dynamodb', region_name='ap-southeast-2').Table('cough-detection')
+    item = table.query(
+        KeyConditionExpression=Key('node-id').eq(id)
+    )
+
+    item = item['Items'][0]
+
+    df = pd.DataFrame(columns=['date', 'confidence'])
+    for o in item['status_history']:
+        df = df.append({
+            'date': o['ts'],
+            'confidence': o['confidence']
+        }, ignore_index=True)
+
+    df['date'] = pd.to_datetime(df['date'], format='%d-%m-%Y %H:%M:%S')
+    df['confidence'] = df['confidence'].astype(int)
+    df = df[df['date']>=(dt.datetime.now()-dt.timedelta(hours=12))]
+    df = df.groupby(pd.Grouper(key='date',freq='H')).count()
+
+    chart_x = []
+    chart_y = []
+    for i, row in df[-8:].iterrows():
+        chart_x.append(i)
+        chart_y.append(str(row['confidence']))
+
+    obj = {
+        'node_id': item['node-id'],
+        'metadata': {
+            'area': item['metadata']['area'],
+            'aisle': item['metadata']['aisle'],
+            'area_type': item['metadata']['type'],
+        },
+        'history': item['status_history'],
+        'chart_x': chart_x,
+        'chart_y': chart_y,
+    }
+
+    print(obj)
+    return jsonify(obj)
 
 # form to upload the image
 @app.route('/upload')
@@ -251,4 +301,4 @@ def convert_sound(filename):
     return mfccs
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port='5000')
+    app.run(debug=True, host='0.0.0.0', port='5000')
