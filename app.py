@@ -26,6 +26,10 @@ CORS(app)
 ALLOWED_EXTENSIONS = {'jpg', 'png', 'jpeg'}
 ALLOWED_EXTENSIONS_SOUND = {'wav', 'mp3'}
 
+@app.route('/')
+def index():
+    return 'This is the cough detection server'
+
 @app.route('/charts')
 def chart():
     return render_template('charts.html')
